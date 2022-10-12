@@ -1,4 +1,6 @@
-# The idea is to generate long time series
+## Systems definition
+#General parameters. I am selecting standard parameters for the runs below, not sure if this is what Robin is using
+# Time parameters
 import sys, os
 sys.path.extend([os.path.abspath('../')])
 import numpy as np
@@ -272,17 +274,6 @@ def ComputeTimeAverage(series,T=14,tau=0, percent=5, threshold=None):
         print(f'{len(list_extremes) = }')
         return A, threshold, list_extremes, convseq
 
-
-## Systems definition
-#General parameters. I am selecting standard parameters for the runs below, not sure if this is what Robin is using
-# Time parameters
-dt =  0.1/model_parameters.dimensional_time # we made dt a bit smaller so that we get daily output
-# Saving the model state n steps
-write_steps = 10 # This ensures the output will be daily
-
-number_of_trajectories = 1
-number_of_perturbed_trajectories = 10
-
 #The other parameters can come from model1.pickle that Robin prepared:
 import pickle
 # loading the model
@@ -295,6 +286,12 @@ model_parameters = model['parameters']
 # Printing the model's parameters
 model_parameters.print_params()
 
+dt =  0.01/model_parameters.dimensional_time # we made dt a bit smaller so that we get daily output
+# Saving the model state n steps
+write_steps = 100 # It seems to me that time = 18 is interpreted as 1 day by some routines. This way we will force the output to be daily (write every `write_steps` iterations)
+
+number_of_trajectories = 1
+number_of_perturbed_trajectories = 10
 #Why did Robin choose n = 0.353? Otherwise the setup is similar to ground_heat.ipynb but with more spectral components. It is not clear to me if we need many spectral components. The typical setup with fewer components is usually enough to provide some realism. 
 
 #Parameters that are different:
@@ -310,10 +307,11 @@ model_parameters.print_params()
 # model_parameters.latex_var_string
 
 # Now we create the test and train trajectories.
+ndays=100000 # how many days to generate
 
 f, Df, ic, time, reference_traj, reference_time, MiddleT, psi, groundT, timedimensional, A, threshold, list_extremes = {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
 for sample_set in ['tr','va']:
-    trajfilename = f'traj_{sample_set}2.nc' # to create new trajectories rename the file or remove it form the directory
+    trajfilename = f'data/traj_{sample_set}_{ndays}.nc' # to create new trajectories rename the file or remove it form the directory
     if not os.path.exists(trajfilename): 
         f[sample_set], Df[sample_set] = create_tendencies(model_parameters)
         print('tendencies created')
@@ -329,7 +327,7 @@ for sample_set in ['tr','va']:
         print(f"done generating initial coordinates with {time[sample_set] = } and {time[sample_set]*model_parameters.dimensional_time = }")
 
         #Now integrate to obtain a trajectory on the attractor
-        integrator.integrate(0., 100000/model_parameters.dimensional_time, dt, ic=ic[sample_set], write_steps=write_steps)
+        integrator.integrate(0., ndays/model_parameters.dimensional_time, dt, ic=ic[sample_set], write_steps=write_steps)
         reference_time[sample_set], reference_traj[sample_set] = integrator.get_trajectories()
         ds = xr.Dataset(data_vars=dict(traj=(["comp", "time"], reference_traj[sample_set])), coords=dict(time=reference_time[sample_set]), attrs=dict(description="Components of the trajectory."))
         print(f'saving {trajfilename}')
