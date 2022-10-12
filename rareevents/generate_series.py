@@ -5,6 +5,9 @@ import sys, os
 sys.path.extend([os.path.abspath('../')])
 import numpy as np
 import matplotlib.pyplot as plt
+import time
+start = time.time()
+
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import rc
 rc('font',**{'family':'serif','sans-serif':['Times'],'size':14})
@@ -309,53 +312,35 @@ number_of_perturbed_trajectories = 10
 # Now we create the test and train trajectories.
 ndays=100000 # how many days to generate
 
-f, Df, ic, time, reference_traj, reference_time, MiddleT, psi, groundT, timedimensional, A, threshold, list_extremes = {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
+
+f, Df, ic, times, reference_traj, reference_time, MiddleT, psi, groundT, timedimensional, A, threshold, list_extremes = {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
 for sample_set in ['tr','va']:
     trajfilename = f'data/traj_{sample_set}_{ndays}.nc' # to create new trajectories rename the file or remove it form the directory
-    if not os.path.exists(trajfilename): 
-        f[sample_set], Df[sample_set] = create_tendencies(model_parameters)
-        print('tendencies created')
-        ## Time integration
-        #Defining an integrator
-        integrator = RungeKuttaIntegrator()
-        integrator.set_func(f[sample_set])
-        #Start on a random initial condition and integrate over a transient time to obtain an initial condition on the attractors. I kept the standard time that is typically used in other runs, so not sure if it perfectly adapted...
-        print('integrator set up')
-        ic[sample_set] = np.random.rand(model_parameters.ndim)*0.1
-        integrator.integrate(0., 30000/model_parameters.dimensional_time, dt, ic=ic[sample_set], write_steps=0) # actually 200000 should be enought according to rare_statistics.ipynb
-        time[sample_set], ic[sample_set] = integrator.get_trajectories()
-        print(f"done generating initial coordinates with {time[sample_set] = } and {time[sample_set]*model_parameters.dimensional_time = }")
+    suffix = 0
+    while os.path.exists(trajfilename): 
+        suffix = suffix + 1
+        trajfilename = f'data/traj_{sample_set}_{ndays}_{suffix}.nc'
 
-        #Now integrate to obtain a trajectory on the attractor
-        integrator.integrate(0., ndays/model_parameters.dimensional_time, dt, ic=ic[sample_set], write_steps=write_steps)
-        reference_time[sample_set], reference_traj[sample_set] = integrator.get_trajectories()
-        ds = xr.Dataset(data_vars=dict(traj=(["comp", "time"], reference_traj[sample_set])), coords=dict(time=reference_time[sample_set]), attrs=dict(description="Components of the trajectory."))
-        print(f'saving {trajfilename}')
-        ds.to_netcdf(trajfilename) 
-    else:
-        print(f'loading {trajfilename}')
-        ds= xr.open_dataset(trajfilename)
-        reference_time[sample_set], reference_traj[sample_set] = ds.time.values, ds.traj.values
-        
-        
+    trajfilename = f'{trajfilename}'
+    f[sample_set], Df[sample_set] = create_tendencies(model_parameters)
+    print('tendencies created')
+    ## Time integration
+    #Defining an integrator
+    integrator = RungeKuttaIntegrator()
+    integrator.set_func(f[sample_set])
+    #Start on a random initial condition and integrate over a transient time to obtain an initial condition on the attractors. I kept the standard time that is typically used in other runs, so not sure if it perfectly adapted...
+    print('integrator set up')
+    ic[sample_set] = np.random.rand(model_parameters.ndim)*0.1
+    integrator.integrate(0., 30000/model_parameters.dimensional_time, dt, ic=ic[sample_set], write_steps=0) # actually 200000 should be enought according to rare_statistics.ipynb
+    times[sample_set], ic[sample_set] = integrator.get_trajectories()
+    print(f"done generating initial coordinates with {times[sample_set] = } and {times[sample_set]*model_parameters.dimensional_time = }")
 
+    #Now integrate to obtain a trajectory on the attractor
+    integrator.integrate(0., ndays/model_parameters.dimensional_time, dt, ic=ic[sample_set], write_steps=write_steps)
+    reference_time[sample_set], reference_traj[sample_set] = integrator.get_trajectories()
+    ds = xr.Dataset(data_vars=dict(traj=(["comp", "time"], reference_traj[sample_set])), coords=dict(time=reference_time[sample_set]), attrs=dict(description="Components of the trajectory."))
+    print(f'saving {trajfilename}')
+    ds.to_netcdf(trajfilename)
 
-    MiddleT[sample_set] = MiddleAtmosphericTemperatureDiagnostic(model_parameters, True)
-    psi[sample_set] = MiddleAtmosphericStreamfunctionDiagnostic(model_parameters, geopotential=True)
-    groundT[sample_set] = GroundTemperatureDiagnostic(model_parameters, True)
-
-    for field in [psi[sample_set],groundT[sample_set],MiddleT[sample_set]]:
-        field.set_data(reference_time[sample_set], reference_traj[sample_set])
-        field.climatology = np.mean(field.diagnostic,0)
-        field.std = np.std(field.diagnostic,0)
-        field.anomaly = field.diagnostic - field.climatology
-        
-    x, y = 9, 9
-    timedimensional[sample_set] = groundT[sample_set]._time*groundT[sample_set]._model_params.dimensional_time
-
-    A[sample_set], threshold[sample_set], list_extremes[sample_set], convseq = ComputeTimeAverage(groundT[sample_set].anomaly[:,x, y],T=14*10)
-    print(f'{threshold[sample_set] = }, {np.sum(list_extremes[sample_set])/len(list_extremes[sample_set]) = }')
-
-for field in [psi[sample_set],groundT[sample_set],MiddleT[sample_set]]:
-    field.extmean = np.mean(field.anomaly[np.where(np.array(list_extremes[sample_set]) == True)[0],...],0)
-    field.extstd = np.std(field.anomaly[np.where(np.array(list_extremes[sample_set]) == True)[0],...],0)
+    end = time.time()
+    print(f"Total elapsed time since the initialization: {end - start = }")
