@@ -310,7 +310,7 @@ number_of_perturbed_trajectories = 10
 # model_parameters.latex_var_string
 
 # Now we create the test and train trajectories.
-ndays=100000 # how many days to generate
+ndays=1000000 # how many days to generate
 
 
 f, Df, ic, times, reference_traj, reference_time, MiddleT, psi, groundT, timedimensional, A, threshold, list_extremes = {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}
