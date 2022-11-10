@@ -291,7 +291,7 @@ model_parameters.print_params()
 
 dt =  0.01/model_parameters.dimensional_time # we made dt a bit smaller so that we get daily output
 # Saving the model state n steps
-write_steps = 100 # It seems to me that time = 18 is interpreted as 1 day by some routines. This way we will force the output to be daily (write every `write_steps` iterations)
+write_steps = 100 # Daily outputs
 
 number_of_trajectories = 1
 number_of_perturbed_trajectories = 10
