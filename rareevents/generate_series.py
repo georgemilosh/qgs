@@ -1,4 +1,5 @@
 ## Systems definition
+# Author Robin Noyelle and George Miloshevich
 #General parameters. I am selecting standard parameters for the runs below, not sure if this is what Robin is using
 # Time parameters
 import sys, os
