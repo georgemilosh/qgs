@@ -33,6 +33,11 @@ See [LICENSE.txt](./LICENSE.txt) for license information.
 
 Please consult the qgs [code repository](http://www.github.com/Climdyn/qgs) for updates.
 
+Fork Information
+---------------
+
+The idea is to couple this model with rare event algorithms to be able to sample extreme events, such as large temperature events.
+
 
 Installation
 ------------
